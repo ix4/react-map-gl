@@ -1,4 +1,3 @@
-// @flow
 // Copyright (c) 2015 Uber Technologies, Inc.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,14 +19,13 @@
 // THE SOFTWARE.
 import * as React from 'react';
 import {useMemo} from 'react';
-import PropTypes from 'prop-types';
+import * as PropTypes from 'prop-types';
 import useDraggableControl, {
   draggableControlDefaultProps,
   draggableControlPropTypes
 } from './draggable-control';
 import {crispPixel} from '../utils/crisp-pixel';
-
-import type {DraggableControlProps, DraggableControlRef} from './draggable-control';
+import {getTerrainElevation} from '../utils/terrain';
 
 const propTypes = Object.assign({}, draggableControlPropTypes, {
   // Custom className
@@ -42,23 +40,20 @@ const defaultProps = Object.assign({}, draggableControlDefaultProps, {
   className: ''
 });
 
-export type MarkerProps = DraggableControlProps & {
-  className: string,
-  longitude: number,
-  latitude: number
-};
-
-function getPosition({props, state, context}): [number, number] {
+function getPosition({props, state, context}) {
   const {longitude, latitude, offsetLeft, offsetTop} = props;
   const {dragPos, dragOffset} = state;
+  const {viewport, map} = context;
 
   // If dragging, just return the current drag position
   if (dragPos && dragOffset) {
     return [dragPos[0] + dragOffset[0], dragPos[1] + dragOffset[1]];
   }
 
+  const altitude = getTerrainElevation(map, {longitude, latitude});
+
   // Otherwise return the projected lat/lng with offset
-  let [x, y] = context.viewport.project([longitude, latitude]);
+  let [x, y] = viewport.project([longitude, latitude, altitude]);
   x += offsetLeft;
   y += offsetTop;
   return [x, y];
@@ -71,39 +66,38 @@ function getPosition({props, state, context}): [number, number] {
  * is almost always triggered by a viewport change, we almost definitely need to
  * recalculate the marker's position when the parent re-renders.
  */
-function Marker(props: MarkerProps) {
-  const thisRef: DraggableControlRef = useDraggableControl(props);
+function Marker(props) {
+  const thisRef = useDraggableControl(props);
   const {state, containerRef} = thisRef;
 
-  const {draggable} = props;
+  const {children, className, draggable} = props;
   const {dragPos} = state;
 
   const [x, y] = getPosition(thisRef);
   const transform = `translate(${crispPixel(x)}px, ${crispPixel(y)}px)`;
   const cursor = draggable ? (dragPos ? 'grabbing' : 'grab') : 'auto';
 
-  const control = useMemo(
-    () => {
-      const containerStyle = {
-        position: 'absolute',
-        left: 0,
-        top: 0,
-        transform,
-        cursor
-      };
+  // Perf: avoid rerendering if only the viewport changed
+  const control = useMemo(() => {
+    const containerStyle = {
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      transform,
+      cursor
+    };
 
-      return (
-        <div
-          className={`mapboxgl-marker ${props.className}`}
-          ref={thisRef.containerRef}
-          style={containerStyle}
-        >
-          {props.children}
-        </div>
-      );
-    },
-    [props.className]
-  );
+    return (
+      <div
+        className={`mapboxgl-marker ${className}`}
+        ref={thisRef.containerRef}
+        // @ts-ignore
+        style={containerStyle}
+      >
+        {children}
+      </div>
+    );
+  }, [children, className]);
 
   const container = containerRef.current;
   if (container) {
@@ -117,4 +111,4 @@ function Marker(props: MarkerProps) {
 Marker.defaultProps = defaultProps;
 Marker.propTypes = propTypes;
 
-export default Marker;
+export default React.memo(Marker);

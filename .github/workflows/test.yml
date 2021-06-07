@@ -5,11 +5,14 @@ on:
   push:
     branches:
     - master
-  pull_request_target:
+  pull_request:
 
 jobs:
   test-node:
     runs-on: ubuntu-latest
+
+    env:
+      MapboxAccessToken: ${{ secrets.MAPBOX_ACCESS_TOKEN_CI }}
 
     steps:
       - uses: actions/checkout@v2.1.1

@@ -1,6 +1,5 @@
-// @flow
 import {useContext, useRef, useEffect} from 'react';
-import PropTypes from 'prop-types';
+import * as PropTypes from 'prop-types';
 import MapContext from './map-context';
 
 export const mapControlDefaultProps = {
@@ -24,23 +23,7 @@ export const mapControlPropTypes = {
   capturePointerMove: PropTypes.bool
 };
 
-export type MapControlProps = {
-  captureScroll: boolean,
-  captureDrag: boolean,
-  captureClick: boolean,
-  captureDoubleClick: boolean,
-  capturePointerMove: boolean,
-  children?: any
-};
-
-export type MapControlRef = {
-  props: any,
-  context: any,
-  state: any,
-  containerRef: {current: null | HTMLElement}
-};
-
-function onMount(thisRef, callbacks = {}): Function {
+function onMount(thisRef) {
   const ref = thisRef.containerRef.current;
   const {eventManager} = thisRef.context;
   if (!ref || !eventManager) {
@@ -49,51 +32,57 @@ function onMount(thisRef, callbacks = {}): Function {
 
   const events = {
     wheel: evt => {
-      if (thisRef.props.captureScroll) {
+      const {props} = thisRef;
+      if (props.captureScroll) {
         evt.stopPropagation();
       }
-      if (callbacks.onScroll) {
-        callbacks.onScroll(evt, thisRef);
+      if (props.onScroll) {
+        props.onScroll(evt, thisRef);
       }
     },
     panstart: evt => {
-      if (thisRef.props.captureDrag) {
+      const {props} = thisRef;
+      if (props.captureDrag) {
         evt.stopPropagation();
       }
-      if (callbacks.onDragStart) {
-        callbacks.onDragStart(evt, thisRef);
+      if (props.onDragStart) {
+        props.onDragStart(evt, thisRef);
       }
     },
     anyclick: evt => {
-      if (thisRef.props.captureClick) {
+      const {props} = thisRef;
+      if (props.captureClick) {
         evt.stopPropagation();
       }
-      if (callbacks.onClick) {
-        callbacks.onClick(evt, thisRef);
+      if (props.onClick) {
+        props.onClick(evt, thisRef);
       }
     },
     click: evt => {
-      if (thisRef.props.captureClick) {
+      const {props} = thisRef;
+      if (props.captureClick) {
         evt.stopPropagation();
       }
-      if (callbacks.onClick) {
-        callbacks.onClick(evt, thisRef);
+      if (props.onClick) {
+        props.onClick(evt, thisRef);
       }
     },
     dblclick: evt => {
-      if (thisRef.props.captureDoubleClick) {
+      const {props} = thisRef;
+      if (props.captureDoubleClick) {
         evt.stopPropagation();
       }
-      if (callbacks.onDoubleClick) {
-        callbacks.onDoubleClick(evt, thisRef);
+      if (props.onDoubleClick) {
+        props.onDoubleClick(evt, thisRef);
       }
     },
     pointermove: evt => {
-      if (thisRef.props.capturePointerMove) {
+      const {props} = thisRef;
+      if (props.capturePointerMove) {
         evt.stopPropagation();
       }
-      if (callbacks.onPointerMove) {
-        callbacks.onPointerMove(evt, thisRef);
+      if (props.onPointerMove) {
+        props.onPointerMove(evt, thisRef);
       }
     }
   };
@@ -105,15 +94,16 @@ function onMount(thisRef, callbacks = {}): Function {
   };
 }
 
-export default function useMapControl(props: MapControlProps, callbacks: any): MapControlRef {
+export default function useMapControl(props = {}) {
   const context = useContext(MapContext);
-  const containerRef = useRef<null | HTMLElement>(null);
-  const thisRef = useRef<MapControlRef>({props, state: {}, context, containerRef});
+  const containerRef = useRef(null);
+  const _thisRef = useRef({props, state: {}, context, containerRef});
+  const thisRef = _thisRef.current;
 
-  thisRef.current.props = props;
-  thisRef.current.context = context;
+  thisRef.props = props;
+  thisRef.context = context;
 
-  useEffect(() => onMount(thisRef.current, callbacks), [context.eventManager]);
+  useEffect(() => onMount(thisRef), [context.eventManager]);
 
-  return thisRef.current;
+  return thisRef;
 }

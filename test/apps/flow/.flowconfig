@@ -1,9 +1,7 @@
 [ignore]
-.*/examples/
-.*/node_modules/@mapbox
 
 [include]
-./src/
+./**/*
 
 [libs]
 

@@ -1,4 +1,3 @@
-// @flow
 // Copyright (c) 2015 Uber Technologies, Inc.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,16 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 import * as React from 'react';
-import {useRef, useState, useEffect} from 'react';
-import PropTypes from 'prop-types';
+import {useRef, useState, useEffect, useCallback} from 'react';
+import * as PropTypes from 'prop-types';
 import useMapControl, {mapControlDefaultProps, mapControlPropTypes} from './use-map-control';
 
 import {getDynamicPosition, ANCHOR_POSITION} from '../utils/dynamic-position';
-
-import type {MapControlProps} from './use-map-control';
+import {getTerrainElevation} from '../utils/terrain';
 import {crispPercentage, crispPixel} from '../utils/crisp-pixel';
-import type {PositionType} from '../utils/dynamic-position';
-import type {WebMercatorViewport} from 'viewport-mercator-project';
 
 const propTypes = Object.assign({}, mapControlPropTypes, {
   // Custom className
@@ -61,7 +57,6 @@ const propTypes = Object.assign({}, mapControlPropTypes, {
 
 const defaultProps = Object.assign({}, mapControlDefaultProps, {
   className: '',
-  altitude: 0,
   offsetLeft: 0,
   offsetTop: 0,
   tipSize: 10,
@@ -73,28 +68,7 @@ const defaultProps = Object.assign({}, mapControlDefaultProps, {
   onClose: () => {}
 });
 
-export type PopupProps = MapControlProps & {
-  className: string,
-  longitude: number,
-  latitude: number,
-  altitude: number,
-  offsetLeft: number,
-  offsetTop: number,
-  tipSize: number,
-  closeButton: boolean,
-  closeOnClick: boolean,
-  anchor: PositionType,
-  dynamicPosition: boolean,
-  sortByDepth: boolean,
-  onClose: Function
-};
-
-function getPosition(
-  props: PopupProps,
-  viewport: WebMercatorViewport,
-  el: null | HTMLElement,
-  [x, y]: [number, number]
-): PositionType {
+function getPosition(props, viewport, el, [x, y]) {
   const {anchor, dynamicPosition, tipSize} = props;
 
   if (el) {
@@ -115,13 +89,7 @@ function getPosition(
   return anchor;
 }
 
-function getContainerStyle(
-  props: PopupProps,
-  viewport: WebMercatorViewport,
-  el: null | HTMLElement,
-  [x, y, z]: [number, number, number],
-  positionType: PositionType
-) {
+function getContainerStyle(props, viewport, el, [x, y, z], positionType) {
   const {offsetLeft, offsetTop, sortByDepth} = props;
   const anchorPosition = ANCHOR_POSITION[positionType];
   const left = x + offsetLeft;
@@ -175,21 +143,24 @@ function onClick(evt, {props, context}) {
  * is almost always triggered by a viewport change, we almost definitely need to
  * recalculate the popup's position when the parent re-renders.
  */
-function Popup(props: PopupProps) {
-  const contentRef = useRef<null | HTMLElement>(null);
-  const {context, containerRef} = useMapControl(props, {onClick});
+function Popup(props) {
+  const contentRef = useRef(null);
+  const thisRef = useMapControl({...props, onClick});
+  const {context, containerRef} = thisRef;
   const [, setLoaded] = useState(false);
 
-  useEffect(
-    () => {
-      // Container just got a size, re-calculate position
-      setLoaded(true);
-    },
-    [contentRef.current]
-  );
+  useEffect(() => {
+    // Container just got a size, re-calculate position
+    setLoaded(true);
+  }, [contentRef.current]);
 
-  const {viewport} = context;
-  const {className, longitude, latitude, altitude, tipSize, closeButton, children} = props;
+  const {viewport, map} = context;
+  const {className, longitude, latitude, tipSize, closeButton, children} = props;
+
+  let {altitude} = props;
+  if (altitude === undefined) {
+    altitude = getTerrainElevation(map, {longitude, latitude});
+  }
 
   const position = viewport.project([longitude, latitude, altitude]);
 
@@ -203,11 +174,14 @@ function Popup(props: PopupProps) {
   );
 
   // If eventManager does not exist (using with static map), listen to React event
-  const onReactClick = context.eventManager ? null : onClick;
+  const onReactClick = useCallback(e => !context.eventManager && onClick(e, thisRef), [
+    context.eventManager
+  ]);
 
   return (
     <div
       className={`mapboxgl-popup mapboxgl-popup-anchor-${positionType} ${className}`}
+      // @ts-ignore
       style={containerStyle}
       ref={containerRef}
     >
@@ -227,4 +201,4 @@ function Popup(props: PopupProps) {
 Popup.propTypes = propTypes;
 Popup.defaultProps = defaultProps;
 
-export default Popup;
+export default React.memo(Popup);

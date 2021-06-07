@@ -138,7 +138,8 @@ test('TransitionManager#processViewportChange', t => {
   const mergeProps = props => Object.assign({}, TransitionManager.defaultProps, props);
 
   TEST_CASES.forEach(testCase => {
-    const transitionManager = new TransitionManager(mergeProps(testCase.initialProps));
+    const transitionManager = new TransitionManager();
+    transitionManager.processViewportChange(mergeProps(testCase.initialProps));
 
     testCase.input.forEach((props, i) => {
       t.is(
@@ -177,9 +178,8 @@ test('TransitionManager#callbacks', t => {
       );
       endCount++;
     },
-    onViewportChange: (newViewport, interactionState) => {
+    onViewportChange: newViewport => {
       t.ok(!transitionInterpolator.arePropsEqual(viewport, newViewport), 'viewport has changed');
-      t.ok(interactionState.inTransition, 'inTransition flag is true');
       viewport = newViewport;
       // update props in transition, should not trigger interruption
       transitionManager.processViewportChange(Object.assign({}, transitionProps, viewport));
@@ -189,7 +189,8 @@ test('TransitionManager#callbacks', t => {
 
   const mergeProps = props => Object.assign({}, TransitionManager.defaultProps, callbacks, props);
 
-  const transitionManager = new TransitionManager(mergeProps(testCase.initialProps));
+  const transitionManager = new TransitionManager(callbacks);
+  transitionManager.processViewportChange(mergeProps(testCase.initialProps));
 
   testCase.input.forEach((props, i) => {
     transitionProps = mergeProps(props);
@@ -210,7 +211,7 @@ const easingFunctions = [t => Math.sqrt(t), t => t, t => t * t, t => t * t * t];
 const interruptions = [0.2, 0.5, 0.8];
 const values = [0, 0.5, 1];
 
-test('TransitionManager#cropEasingFunction', function(t) {
+test('TransitionManager#cropEasingFunction', function (t) {
   easingFunctions.forEach(func => {
     interruptions.forEach(x0 => {
       var newEasing = cropEasingFunction(func, x0);
@@ -375,12 +376,11 @@ test('TransitionManager#TRANSITION_EVENTS', t => {
       mode = parseInt(mode);
       let transitionProps;
       let time = 0;
-      const transitionManager = new TransitionManager(
+      const transitionManager = new TransitionManager({getTime: () => time});
+      transitionManager.processViewportChange(
         Object.assign({}, TransitionManager.defaultProps, testCase.initialProps, {
           transitionInterruption: mode
-        }),
-        // Override current time getter
-        () => time
+        })
       );
 
       testCase.input.forEach((props, i) => {
@@ -441,7 +441,8 @@ test('TransitionManager#auto#duration', t => {
     bearing: 0,
     transitionDuration: 200
   };
-  const transitionManager = new TransitionManager(mergeProps(initialProps));
+  const transitionManager = new TransitionManager();
+  transitionManager.processViewportChange(mergeProps(initialProps));
   transitionManager.processViewportChange(
     mergeProps({
       width: 100,

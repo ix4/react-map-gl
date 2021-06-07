@@ -26,7 +26,7 @@ module.exports = {
         PROJECT_TYPE: 'github',
 
         PROJECT_NAME: 'react-map-gl',
-        PROJECT_ORG: 'uber',
+        PROJECT_ORG: 'visgl',
         PROJECT_ORG_LOGO: 'images/visgl-logo.png',
         PROJECT_URL: 'https://github.com/visgl/',
         PROJECT_DESC: 'React wrapper for Mapbox GL JS',
@@ -39,7 +39,7 @@ module.exports = {
         // Should be like btoa('YourUsername:YourKey') and should be readonly.
         GITHUB_KEY: null,
 
-        HOME_PATH: '/',
+        HOME_PATH: '',
 
         PROJECTS: [
           {
@@ -150,13 +150,19 @@ module.exports = {
             image: 'images/example-draw-polygon.jpg',
             componentUrl: resolve(__dirname, '../examples/draw-polygon/src/app.js'),
             path: 'examples/draw-polygon'
+          },
+          {
+            title: 'Terrain',
+            image: 'images/example-terrain.jpg',
+            componentUrl: resolve(__dirname, '../examples/terrain/src/app.js'),
+            path: 'examples/terrain'
           }
         ],
 
         THEME_OVERRIDES: require('./src/theme.json'),
 
         STYLESHEETS: [
-          'https://api.tiles.mapbox.com/mapbox-gl-js/v1.6.0/mapbox-gl.css',
+          'https://api.tiles.mapbox.com/mapbox-gl-js/v2.0.0/mapbox-gl.css',
           'https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.0.9/mapbox-gl-draw.css',
           '/style.css'
         ]

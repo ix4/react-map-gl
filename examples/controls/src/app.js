@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {Component} from 'react';
+import {useState} from 'react';
 import {render} from 'react-dom';
 import MapGL, {
   Popup,
@@ -18,108 +18,73 @@ import CITIES from '../../.data/cities.json';
 const TOKEN = ''; // Set your mapbox token here
 
 const geolocateStyle = {
-  position: 'absolute',
   top: 0,
   left: 0,
   padding: '10px'
 };
 
 const fullscreenControlStyle = {
-  position: 'absolute',
   top: 36,
   left: 0,
   padding: '10px'
 };
 
 const navStyle = {
-  position: 'absolute',
   top: 72,
   left: 0,
   padding: '10px'
 };
 
 const scaleControlStyle = {
-  position: 'absolute',
   bottom: 36,
   left: 0,
   padding: '10px'
 };
 
-export default class App extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      viewport: {
-        latitude: 37.785164,
-        longitude: -100,
-        zoom: 3.5,
-        bearing: 0,
-        pitch: 0
-      },
-      popupInfo: null
-    };
-  }
+export default function App() {
+  const [viewport, setViewport] = useState({
+    latitude: 40,
+    longitude: -100,
+    zoom: 3.5,
+    bearing: 0,
+    pitch: 0
+  });
+  const [popupInfo, setPopupInfo] = useState(null);
 
-  _updateViewport = viewport => {
-    this.setState({viewport});
-  };
-
-  _onClickMarker = city => {
-    this.setState({popupInfo: city});
-  };
-
-  _renderPopup() {
-    const {popupInfo} = this.state;
-
-    return (
-      popupInfo && (
-        <Popup
-          tipSize={5}
-          anchor="top"
-          longitude={popupInfo.longitude}
-          latitude={popupInfo.latitude}
-          closeOnClick={false}
-          onClose={() => this.setState({popupInfo: null})}
-        >
-          <CityInfo info={popupInfo} />
-        </Popup>
-      )
-    );
-  }
-
-  render() {
-    const {viewport} = this.state;
-
-    return (
+  return (
+    <>
       <MapGL
         {...viewport}
         width="100%"
         height="100%"
         mapStyle="mapbox://styles/mapbox/dark-v9"
-        onViewportChange={this._updateViewport}
+        onViewportChange={setViewport}
         mapboxApiAccessToken={TOKEN}
       >
-        <Pins data={CITIES} onClick={this._onClickMarker} />
+        <Pins data={CITIES} onClick={setPopupInfo} />
 
-        {this._renderPopup()}
+        {popupInfo && (
+          <Popup
+            tipSize={5}
+            anchor="top"
+            longitude={popupInfo.longitude}
+            latitude={popupInfo.latitude}
+            closeOnClick={false}
+            onClose={setPopupInfo}
+          >
+            <CityInfo info={popupInfo} />
+          </Popup>
+        )}
 
-        <div style={geolocateStyle}>
-          <GeolocateControl />
-        </div>
-        <div style={fullscreenControlStyle}>
-          <FullscreenControl />
-        </div>
-        <div style={navStyle}>
-          <NavigationControl />
-        </div>
-        <div style={scaleControlStyle}>
-          <ScaleControl />
-        </div>
-
-        <ControlPanel containerComponent={this.props.containerComponent} />
+        <GeolocateControl style={geolocateStyle} />
+        <FullscreenControl style={fullscreenControlStyle} />
+        <NavigationControl style={navStyle} />
+        <ScaleControl style={scaleControlStyle} />
       </MapGL>
-    );
-  }
+
+      <ControlPanel />
+    </>
+  );
 }
 
 export function renderToDom(container) {

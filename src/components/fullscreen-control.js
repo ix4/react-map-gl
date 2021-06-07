@@ -1,5 +1,3 @@
-// @flow
-
 // Copyright (c) 2015 Uber Technologies, Inc.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,18 +19,17 @@
 // THE SOFTWARE.
 
 import {document} from '../utils/globals';
-import PropTypes from 'prop-types';
+import * as PropTypes from 'prop-types';
 import * as React from 'react';
-import {useEffect, useState} from 'react';
+import {useEffect, useState, useMemo} from 'react';
 import mapboxgl from '../utils/mapboxgl';
 
 import useMapControl, {mapControlDefaultProps, mapControlPropTypes} from './use-map-control';
 
-import type {MapControlProps} from './use-map-control';
-
 const propTypes = Object.assign({}, mapControlPropTypes, {
   // Custom className
   className: PropTypes.string,
+  style: PropTypes.object,
   /* eslint-disable max-len */
   // `container` is the [compatible DOM element](https://developer.mozilla.org/en-US/docs/Web/API/Element/requestFullScreen#Compatible_elements)
   // which should be made full screen. By default, the map container element will be made full screen.
@@ -47,22 +44,14 @@ const defaultProps = Object.assign({}, mapControlDefaultProps, {
   label: 'Toggle fullscreen'
 });
 
-export type FullscreenControlProps = MapControlProps & {
-  className: string,
-  container: ?HTMLElement,
-  label: string
-};
-
-function FullscreenControl(props: FullscreenControlProps) {
+function FullscreenControl(props) {
   const {context, containerRef} = useMapControl(props);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showButton, setShowButton] = useState(false);
   const [mapboxFullscreenControl, createMapboxFullscreenControl] = useState(null);
 
   useEffect(() => {
-    const container = props.container || context.container;
-
-    const control = new mapboxgl.FullscreenControl({container});
+    const control = new mapboxgl.FullscreenControl();
 
     createMapboxFullscreenControl(control);
     setShowButton(control._checkFullscreenSupport());
@@ -84,9 +73,12 @@ function FullscreenControl(props: FullscreenControlProps) {
 
   const onClickFullscreen = () => {
     if (mapboxFullscreenControl) {
+      mapboxFullscreenControl._container = props.container || context.container;
       mapboxFullscreenControl._onClickFullscreen();
     }
   };
+
+  const style = useMemo(() => ({position: 'absolute', ...props.style}), [props.style]);
 
   if (!showButton) {
     return null;
@@ -96,16 +88,18 @@ function FullscreenControl(props: FullscreenControlProps) {
   const type = isFullscreen ? 'shrink' : 'fullscreen';
 
   return (
-    <div className={`mapboxgl-ctrl mapboxgl-ctrl-group ${className}`} ref={containerRef}>
-      <button
-        key={type}
-        className={`mapboxgl-ctrl-icon mapboxgl-ctrl-${type}`}
-        type="button"
-        title={label}
-        onClick={onClickFullscreen}
-      >
-        <span className="mapboxgl-ctrl-icon" aria-hidden="true" />
-      </button>
+    <div style={style} className={className}>
+      <div className="mapboxgl-ctrl mapboxgl-ctrl-group" ref={containerRef}>
+        <button
+          key={type}
+          className={`mapboxgl-ctrl-icon mapboxgl-ctrl-${type}`}
+          type="button"
+          title={label}
+          onClick={onClickFullscreen}
+        >
+          <span className="mapboxgl-ctrl-icon" aria-hidden="true" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -113,4 +107,4 @@ function FullscreenControl(props: FullscreenControlProps) {
 FullscreenControl.propTypes = propTypes;
 FullscreenControl.defaultProps = defaultProps;
 
-export default FullscreenControl;
+export default React.memo(FullscreenControl);

@@ -1,4 +1,3 @@
-// @flow
 // Copyright (c) 2015 Uber Technologies, Inc.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,7 +20,7 @@
 import * as React from 'react';
 import {useContext, useEffect, useMemo, useState, useRef} from 'react';
 import {cloneElement} from 'react';
-import PropTypes from 'prop-types';
+import * as PropTypes from 'prop-types';
 import MapContext from './map-context';
 import assert from '../utils/assert';
 import deepEqual from '../utils/deep-equal';
@@ -29,16 +28,6 @@ import deepEqual from '../utils/deep-equal';
 const propTypes = {
   type: PropTypes.string.isRequired,
   id: PropTypes.string
-};
-
-type SourceProps = {
-  id?: string,
-  type: string,
-  children?: any,
-  data?: any,
-  coordinates?: any,
-  url?: any,
-  tiles?: any
 };
 
 let sourceCounter = 0;
@@ -49,7 +38,9 @@ function createSource(map, id, props) {
     delete options.id;
     delete options.children;
     map.addSource(id, options);
+    return map.getSource(id);
   }
+  return null;
 }
 
 /* eslint-disable complexity */
@@ -102,56 +93,56 @@ function updateSource(source, props, prevProps) {
 }
 /* eslint-enable complexity */
 
-function Source(props: SourceProps) {
+function Source(props) {
   const context = useContext(MapContext);
-  const propsRef = useRef<SourceProps>({id: props.id, type: props.type});
+  const propsRef = useRef({id: props.id, type: props.type});
   const [, setStyleLoaded] = useState(0);
 
   const id = useMemo(() => props.id || `jsx-source-${sourceCounter++}`, []);
   const {map} = context;
 
-  useEffect(
-    () => {
-      if (map) {
-        const forceUpdate = () => setStyleLoaded(version => version + 1);
-        map.on('styledata', forceUpdate);
+  useEffect(() => {
+    if (map) {
+      const forceUpdate = () => setStyleLoaded(version => version + 1);
+      map.on('styledata', forceUpdate);
 
-        return () => {
-          map.off('styledata', forceUpdate);
-          /* global requestAnimationFrame */
-          // Do not remove source immediately because the
-          // dependent <Layer>s' componentWillUnmount() might not have been called
-          // Removing source before dependent layers will throw error
-          // TODO - find a more robust solution
-          requestAnimationFrame(() => {
-            if (map.style && map.style._loaded) {
-              map.removeSource(id);
-            }
-          });
-        };
-      }
-      return undefined;
-    },
-    [map]
-  );
+      return () => {
+        map.off('styledata', forceUpdate);
+        /* global requestAnimationFrame */
+        // Do not remove source immediately because the
+        // dependent <Layer>s' componentWillUnmount() might not have been called
+        // Removing source before dependent layers will throw error
+        // TODO - find a more robust solution
+        requestAnimationFrame(() => {
+          if (map.style && map.style._loaded && map.getSource(id)) {
+            map.removeSource(id);
+          }
+        });
+      };
+    }
+    return undefined;
+  }, [map, id]);
 
-  const source = map && map.style && map.getSource(id);
+  let source = map && map.style && map.getSource(id);
   if (source) {
     updateSource(source, props, propsRef.current);
   } else {
-    createSource(map, id, props);
+    source = createSource(map, id, props);
   }
+  propsRef.current = props;
 
-  return source
-    ? React.Children.map(
+  return (
+    (source &&
+      React.Children.map(
         props.children,
         child =>
           child &&
           cloneElement(child, {
             source: id
           })
-      )
-    : null;
+      )) ||
+    null
+  );
 }
 
 Source.propTypes = propTypes;
